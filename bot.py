@@ -5,6 +5,16 @@ import datetime
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
+import os
+
+# Controlliamo se la cartella esiste
+if not os.path.exists("media"):
+    print("❌ La cartella 'media' non esiste! La creo adesso.")
+    os.makedirs("media", exist_ok=True)
+
+# Stampiamo i file presenti nella cartella
+print("📂 Contenuto della cartella media:", os.listdir("media"))
+
 TOKEN = "7725405275:AAFlQ8RicJvYPQrAC6Oaru1LEY5BNE7ChPg"
 
 # Creazione della cartella "media" se non esiste
