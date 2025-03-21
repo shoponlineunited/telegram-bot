@@ -126,7 +126,22 @@ def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
-    app.run_polling()
+    PORT = int(os.environ.get("PORT", 8443))
+WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/"
+
+async def start_webhook():
+    await app.bot.set_webhook(WEBHOOK_URL)
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path="",
+        webhook_url=WEBHOOK_URL
+    )
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(start_webhook())
+
 
 if __name__ == "__main__":
     main()
