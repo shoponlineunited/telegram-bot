@@ -5,17 +5,15 @@ import datetime
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-import os
-
-# Controlliamo se la cartella esiste
+# 🔹 Controlliamo se la cartella "media" esiste
 if not os.path.exists("media"):
     print("❌ La cartella 'media' non esiste! La creo adesso.")
     os.makedirs("media", exist_ok=True)
 
-# Stampiamo i file presenti nella cartella
+# 📂 Stampiamo il contenuto della cartella per debug
 print("📂 Contenuto della cartella media:", os.listdir("media"))
 
-TOKEN = "7725405275:AAFlQ8RicJvYPQrAC6Oaru1LEY5BNE7ChPg"
+TOKEN = os.getenv("TOKEN")  # Usa variabile d'ambiente per il token
 
 # Creazione della cartella "media" se non esiste
 MEDIA_FOLDER = "media"
@@ -121,16 +119,17 @@ async def send_multiple_media(update: Update, count=3):
             else:
                 await update.message.reply_video(media, caption=random.choice(VIDEO_RESPONSES))
 
-# Configurazione del bot
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
-    PORT = int(os.environ.get("PORT", 10000))  # Porta standard per Render
+# ✅ Configuriamo l'Applicazione Telegram
+app = Application.builder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
+
+# ✅ Configurazione Webhook per Render
+PORT = int(os.environ.get("PORT", 10000))
 WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'default.render.com')}/webhook"
 
-
 async def start_webhook():
+    """Avvia il webhook per Render"""
     await app.bot.set_webhook(WEBHOOK_URL)
     await app.run_webhook(
         listen="0.0.0.0",
@@ -139,13 +138,7 @@ async def start_webhook():
         webhook_url=WEBHOOK_URL
     )
 
+# ✅ Avvio del Webhook
 if __name__ == "__main__":
     import asyncio
     asyncio.run(start_webhook())
-
-
-if __name__ == "__main__":
-    main()
-
-
-
