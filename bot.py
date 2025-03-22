@@ -146,4 +146,11 @@ async def start_webhook():
 if __name__ == "__main__":
     import asyncio
     print("🚀 Avvio del bot su Render con Webhook...")
-    asyncio.run(start_webhook())
+    if __name__ == "__main__":
+    import asyncio
+
+    print("🚀 Avvio del bot su Render con Webhook...")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(start_webhook())
+
