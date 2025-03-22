@@ -126,8 +126,9 @@ def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
-    PORT = int(os.environ.get("PORT", 8443))
-WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/"
+    PORT = int(os.environ.get("PORT", 10000))  # Porta standard per Render
+WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'default.render.com')}/webhook"
+
 
 async def start_webhook():
     await app.bot.set_webhook(WEBHOOK_URL)
