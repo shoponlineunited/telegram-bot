@@ -5,7 +5,7 @@ import datetime
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# 🔹 Token Telegram (inserito manualmente per evitare problemi su Render)
+# 🔹 Token Telegram (inserito manualmente)
 TOKEN = "7725405275:AAFlQ8RicJvYPQrAC6Oaru1LEY5BNE7ChPg"
 
 # 🔹 Debug: Verifica che il token sia stato caricato correttamente
@@ -123,5 +123,27 @@ async def send_multiple_media(update: Update, count=3):
             else:
                 await update.message.reply_video(media, caption=random.choice(VIDEO_RESPONSES))
 
-# ✅ Configuriamo l'Applicazione Telegram
-app
+# ✅ Configuriamo l'Applicazione Telegram PRIMA di usare il Webhook
+app = Application.builder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
+
+# ✅ Configurazione Webhook per Render
+PORT = int(os.environ.get("PORT", 10000))
+WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'default.render.com')}/webhook"
+
+async def start_webhook():
+    """Avvia il webhook per Render"""
+    await app.bot.set_webhook(WEBHOOK_URL)
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path="",
+        webhook_url=WEBHOOK_URL
+    )
+
+# ✅ Avvio del Webhook
+if __name__ == "__main__":
+    import asyncio
+    print("🚀 Avvio del bot su Render con Webhook...")
+    asyncio.run(start_webhook())
