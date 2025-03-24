@@ -150,11 +150,13 @@ if __name__ == "__main__":
 
     try:
         loop = asyncio.get_running_loop()
+        print("⚠️ Un loop asyncio è già in esecuzione. Uso 'asyncio.create_task()' per avviare il webhook.")
+        loop.create_task(start_webhook())
     except RuntimeError:
+        print("✅ Nessun loop rilevato. Ne creo uno nuovo.")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-    loop.create_task(start_webhook())
+        loop.run_until_complete(start_webhook())
 
     print("✅ Webhook avviato correttamente!")
-    loop.run_forever()
+
