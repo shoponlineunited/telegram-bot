@@ -148,12 +148,13 @@ if __name__ == "__main__":
 
     print("🚀 Avvio del bot su Render con Webhook...")
 
-    loop = asyncio.get_event_loop()
-
     try:
-        loop.run_until_complete(start_webhook())
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        print("⚠️ Il loop asyncio è già attivo. Uso 'asyncio.create_task()' per avviare il webhook.")
-        asyncio.create_task(start_webhook())
-        loop.run_forever()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
+    loop.create_task(start_webhook())
+
+    print("✅ Webhook avviato correttamente!")
+    loop.run_forever()
