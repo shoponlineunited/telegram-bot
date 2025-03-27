@@ -1,7 +1,11 @@
+import nest_asyncio
+nest_asyncio.apply()
+
 import os
 import random
 import json
 import datetime
+import asyncio
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
@@ -11,21 +15,17 @@ TOKEN = "7725405275:AAFlQ8RicJvYPQrAC6Oaru1LEY5BNE7ChPg"
 # 🔹 Debug: Verifica che il token sia stato caricato correttamente
 print(f"🔍 Il token caricato è: {TOKEN}")
 
-# 🔹 Controlliamo se la cartella "media" esiste
+# 🔹 Assicuriamoci che la cartella "media" esista
 if not os.path.exists("media"):
     print("❌ La cartella 'media' non esiste! La creo adesso.")
     os.makedirs("media", exist_ok=True)
-
-# 📂 Stampiamo il contenuto della cartella per debug
 print("📂 Contenuto della cartella media:", os.listdir("media"))
 
-# Creazione della cartella "media" se non esiste
 MEDIA_FOLDER = "media"
 os.makedirs(MEDIA_FOLDER, exist_ok=True)
 
-# Dizionario per memorizzare i punti degli utenti
+# File per memorizzare i punti degli utenti
 USER_POINTS_FILE = "user_points.json"
-
 try:
     with open(USER_POINTS_FILE, "r") as file:
         user_points = json.load(file)
@@ -53,35 +53,27 @@ async def start(update: Update, context: CallbackContext):
 # Funzione per ricevere media
 async def receive_media(update: Update, context: CallbackContext):
     user_id = str(update.message.from_user.id)
-    
-    # Controlla se l'utente ha già punti
+    # Incrementa il punteggio dell'utente
     user_points[user_id] = user_points.get(user_id, 0) + 1
-
-    # Salva i punti aggiornati nel file
+    # Salva i punti aggiornati
     with open(USER_POINTS_FILE, "w") as file:
         json.dump(user_points, file)
-
     # Creazione del nome file con data e ora
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
     if update.message.photo:
         media_type = "photo"
         received_filename = f"foto_{timestamp}.jpg"
-        file = await update.message.photo[-1].get_file()
-
+        file_obj = await update.message.photo[-1].get_file()
     elif update.message.video:
         media_type = "video"
         received_filename = f"video_{timestamp}.mp4"
-        file = await update.message.video.get_file()
-
+        file_obj = await update.message.video.get_file()
     else:
         await update.message.reply_text("⚠️ Per favore, invia una foto o un video.")
         return
-
     received_path = os.path.join(MEDIA_FOLDER, received_filename)
-    await file.download_to_drive(received_path)
-
-    # Se l'utente ha raggiunto 5 invii, riceve 3 media in una sola volta
+    await file_obj.download_to_drive(received_path)
+    # Se l'utente ha raggiunto 5 invii, invia 3 media in omaggio
     if user_points[user_id] % 5 == 0:
         await update.message.reply_text("🎉 Complimenti! Hai inviato 5 media e ricevi 3 media in omaggio! 🚀")
         await send_multiple_media(update, 3)
@@ -91,30 +83,24 @@ async def receive_media(update: Update, context: CallbackContext):
 # Funzione per inviare un media casuale
 async def send_random_media(update: Update, media_type):
     media_files = [f for f in os.listdir(MEDIA_FOLDER) if f.startswith(media_type)]
-    
     if not media_files:
         await update.message.reply_text("😕 Non abbiamo più media da inviarti, riprova più tardi!")
         return
-    
     random_file = random.choice(media_files)
     file_path = os.path.join(MEDIA_FOLDER, random_file)
-
     with open(file_path, "rb") as media:
         if media_type == "photo":
             await update.message.reply_photo(media, caption=random.choice(PHOTO_RESPONSES))
         else:
             await update.message.reply_video(media, caption=random.choice(VIDEO_RESPONSES))
 
-# Funzione per inviare 3 media in una sola volta
+# Funzione per inviare 3 media in una volta
 async def send_multiple_media(update: Update, count=3):
     media_files = os.listdir(MEDIA_FOLDER)
-    
     if len(media_files) < count:
         await update.message.reply_text("😕 Non abbiamo abbastanza media, riceverai quello che abbiamo!")
         count = len(media_files)
-
     random_files = random.sample(media_files, count)
-
     for file_name in random_files:
         file_path = os.path.join(MEDIA_FOLDER, file_name)
         with open(file_path, "rb") as media:
@@ -123,7 +109,7 @@ async def send_multiple_media(update: Update, count=3):
             else:
                 await update.message.reply_video(media, caption=random.choice(VIDEO_RESPONSES))
 
-# ✅ Configuriamo l'Applicazione Telegram PRIMA di usare il Webhook
+# ✅ Configuriamo l'applicazione Telegram (crea l'oggetto "app")
 app = Application.builder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
@@ -133,7 +119,6 @@ PORT = int(os.environ.get("PORT", 10000))
 WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'default.render.com')}/webhook"
 
 async def start_webhook():
-    """Avvia il webhook per Render"""
     await app.bot.set_webhook(WEBHOOK_URL)
     await app.run_webhook(
         listen="0.0.0.0",
@@ -142,17 +127,20 @@ async def start_webhook():
         webhook_url=WEBHOOK_URL
     )
 
-# ✅ Avvio del Webhook
+# ✅ Avvio del bot su Render
 if __name__ == "__main__":
     import asyncio
 
     print("🚀 Avvio del bot su Render con Webhook...")
 
     try:
+        # Se è già presente un loop, usalo per avviare il webhook
         loop = asyncio.get_running_loop()
         print("⚠️ Un loop asyncio è già in esecuzione. Avvio il Webhook senza bloccare il loop.")
         loop.create_task(start_webhook())
+        loop.run_forever()
     except RuntimeError:
+        # Se non c'è un loop, creane uno nuovo e usalo
         print("✅ Nessun loop rilevato. Uso 'asyncio.run()' per avviare il Webhook.")
         asyncio.run(start_webhook())
 
