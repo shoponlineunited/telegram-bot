@@ -5,14 +5,11 @@ import os
 import random
 import json
 import datetime
-import asyncio
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # 🔹 Token Telegram (inserito manualmente)
 TOKEN = "7725405275:AAFlQ8RicJvYPQrAC6Oaru1LEY5BNE7ChPg"
-
-# 🔹 Debug: Verifica che il token sia stato caricato correttamente
 print(f"🔍 Il token caricato è: {TOKEN}")
 
 # 🔹 Assicuriamoci che la cartella "media" esista
@@ -53,7 +50,7 @@ async def start(update: Update, context: CallbackContext):
 # Funzione per ricevere media
 async def receive_media(update: Update, context: CallbackContext):
     user_id = str(update.message.from_user.id)
-    # Incrementa il punteggio dell'utente
+    # Incrementa i punti dell'utente
     user_points[user_id] = user_points.get(user_id, 0) + 1
     # Salva i punti aggiornati
     with open(USER_POINTS_FILE, "w") as file:
@@ -109,7 +106,7 @@ async def send_multiple_media(update: Update, count=3):
             else:
                 await update.message.reply_video(media, caption=random.choice(VIDEO_RESPONSES))
 
-# ✅ Configuriamo l'applicazione Telegram (crea l'oggetto "app")
+# ✅ Configuriamo l'applicazione Telegram
 app = Application.builder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
@@ -118,30 +115,12 @@ app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, receive_media))
 PORT = int(os.environ.get("PORT", 10000))
 WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'default.render.com')}/webhook"
 
-async def start_webhook():
-    await app.bot.set_webhook(WEBHOOK_URL)
-    await app.run_webhook(
+# Avvio sincrono del Webhook (bloccante)
+if __name__ == "__main__":
+    print("🚀 Avvio del bot su Render con Webhook...")
+    app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
         url_path="",
         webhook_url=WEBHOOK_URL
     )
-
-# ✅ Avvio del bot su Render
-if __name__ == "__main__":
-    import asyncio
-
-    print("🚀 Avvio del bot su Render con Webhook...")
-
-    try:
-        # Se è già presente un loop, usalo per avviare il webhook
-        loop = asyncio.get_running_loop()
-        print("⚠️ Un loop asyncio è già in esecuzione. Avvio il Webhook senza bloccare il loop.")
-        loop.create_task(start_webhook())
-        loop.run_forever()
-    except RuntimeError:
-        # Se non c'è un loop, creane uno nuovo e usalo
-        print("✅ Nessun loop rilevato. Uso 'asyncio.run()' per avviare il Webhook.")
-        asyncio.run(start_webhook())
-
-    print("✅ Webhook avviato correttamente e bot attivo!")
